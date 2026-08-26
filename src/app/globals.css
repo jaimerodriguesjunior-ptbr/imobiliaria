@@ -20,3 +20,8 @@
 .dashboard-page { min-height:100dvh; padding:30px; background:linear-gradient(135deg,#d3deec 0%,#e8edf5 48%,#c9d6e7 100%); }
 .dashboard-inner { width:100%; max-width:1280px; margin:0 auto; }
 @media(max-width:760px){ .dashboard-page { min-height:100dvh; padding:70px 14px 18px; } }
+:root { --app-background:linear-gradient(125deg,#142344,#2761d2); }
+body { background:var(--app-background) fixed; }
+.login,.dashboard-page { background:var(--app-background); }
+.content > .top h1,.dashboard-inner > .top h1 { color:#fff; text-shadow:0 1px 2px rgba(8,20,48,.35); }
+.content > .top p,.dashboard-inner > .top p { color:#d9e6ff; }
