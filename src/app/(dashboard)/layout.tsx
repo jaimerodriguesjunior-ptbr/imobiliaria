@@ -1,2 +1,4 @@
 import { Sidebar } from "@/components/Sidebar";
-export default function DashboardLayout({ children }: { children: React.ReactNode }) { return <div className="shell"><Sidebar/><main className="content">{children}</main></div>; }
+import { getCompanySettings } from "@/actions/imobiliaria";
+import { getCompanyLogoPublicUrl } from "@/lib/company-logo";
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) { const settings = await getCompanySettings(); return <div className="shell"><Sidebar logoUrl={getCompanyLogoPublicUrl(settings?.logo_path)}/><main className="content">{children}</main></div>; }

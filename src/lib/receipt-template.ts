@@ -2,12 +2,12 @@ import { formatCurrency, moneyInWords } from "@/lib/domain";
 
 type ReceiptData = {
   competence: string; company: Record<string, string | null>; owner: Record<string, string | null>;
-  tenant: Record<string, string | null> | null; lease: Record<string, string | number | null>;
+  renter: Record<string, string | null> | null; lease: Record<string, string | number | null>;
 };
 
 const text = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 
-export function renderReceiptDocument({ competence, company, owner, tenant, lease }: ReceiptData) {
+export function renderReceiptDocument({ competence, company, owner, renter, lease }: ReceiptData) {
   const month = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${competence}-01T12:00:00Z`)).toUpperCase();
   const address = [lease.street, lease.number, lease.complement].filter(Boolean).join(", ");
   const rent = Number(lease.rent_amount || 0);
@@ -30,8 +30,8 @@ export function renderReceiptDocument({ competence, company, owner, tenant, leas
     <table class="fields" role="presentation"><tbody>
       <tr><td><span class="label">NOME DO LOCADOR:</span> ${text(owner.name)}</td></tr>
       <tr><td><span class="label">CPF/CNPJ DO LOCADOR:</span> ${text(owner.document)}</td></tr>
-      <tr><td><span class="label">NOME DO LOCATÁRIO:</span> ${text(tenant?.name)}</td></tr>
-      <tr><td><span class="label">CPF/CNPJ DO LOCATÁRIO:</span> ${text(tenant?.document)}</td></tr>
+      <tr><td><span class="label">NOME DO LOCATÁRIO:</span> ${text(renter?.name)}</td></tr>
+      <tr><td><span class="label">CPF/CNPJ DO LOCATÁRIO:</span> ${text(renter?.document)}</td></tr>
       <tr><td><span class="label">NUMERO DO CONTRATO:</span> ${text(lease.contract_number)}</td></tr>
       <tr><td><span class="label">ENDEREÇO DO IMÓVEL:</span> ${text(address)}</td></tr>
       <tr><td><span class="label">MUNICIPIO DO IMÓVEL:</span> ${text([lease.city, lease.state].filter(Boolean).join(" "))}</td></tr>

@@ -5,7 +5,7 @@ export type CsvLease = {
   street: string;
   number: string;
   complement: string;
-  tenantName: string;
+  renterName: string;
   ownerName: string;
   rentAmount: number | null;
   commissionAmount: number | null;
@@ -41,7 +41,7 @@ export function parseLeaseCsv(content: string): CsvLease[] {
     return {
       contractNumber: column(values, "Nº Ctr"), propertyCode: column(values, "Cod. Imóvel"), category: column(values, "Categoria"),
       street: column(values, "Endereço"), number: column(values, "Nº"), complement: column(values, "Ap/ Sl"),
-      tenantName: column(values, "Locatário"), ownerName: column(values, "Proprietário"),
+      renterName: column(values, "Locatário"), ownerName: column(values, "Proprietário"),
       rentAmount: parseBrazilianMoney(column(values, "Aluguel")), commissionAmount: parseBrazilianMoney(column(values, "Tx. Adm.")),
       commissionRate: parseBrazilianRate(column(values, "%Tx. Adm")),
     };
