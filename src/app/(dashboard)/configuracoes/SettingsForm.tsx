@@ -1,6 +1,6 @@
 "use client";
 
-import { saveCompanySettings } from "@/actions/imobiliaria";
+import { saveCompanySettings } from "@/actions/imobiliaria-v2";
 import { useActionState } from "react";
 
 const labels: Record<string, string> = {

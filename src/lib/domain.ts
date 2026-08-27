@@ -17,8 +17,22 @@ export const normalizeText = (value = "") => value
   .replace(/\s+/g, " ").trim().toUpperCase();
 
 export function parseBrazilianMoney(value = "") {
-  const clean = value.replace(/[^0-9,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const parsed = Number(clean);
+  const clean = value.replace(/[^0-9,.-]/g, "").trim();
+  if (!clean) return null;
+  const comma = clean.lastIndexOf(",");
+  const dot = clean.lastIndexOf(".");
+  const decimalSeparator = comma > dot ? "," : dot > comma ? "." : "";
+  let normalized = clean;
+  if (decimalSeparator) {
+    const decimalIndex = clean.lastIndexOf(decimalSeparator);
+    const decimalDigits = clean.length - decimalIndex - 1;
+    if (decimalDigits === 2) {
+      normalized = `${clean.slice(0, decimalIndex).replace(/[.,]/g, "")}.${clean.slice(decimalIndex + 1)}`;
+    } else {
+      normalized = clean.replace(/[.,]/g, "");
+    }
+  }
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -30,14 +44,37 @@ export function parseLeaseCsv(content: string): CsvLease[] {
   const lines = content.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
   const headerIndex = lines.findIndex((line) => normalizeText(line).includes("LOCATARIO") && normalizeText(line).includes("PROPRIETARIO"));
   if (headerIndex < 0) throw new Error("Não localizamos o cabeçalho do relatório de locações.");
-  const headers = lines[headerIndex].split(";").map(normalizeText);
+  const splitLine = (line: string) => {
+    const values: string[] = [];
+    let value = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const character = line[index];
+      if (character === '"') {
+        if (quoted && line[index + 1] === '"') {
+          value += '"';
+          index += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (character === ";" && !quoted) {
+        values.push(value);
+        value = "";
+      } else {
+        value += character;
+      }
+    }
+    values.push(value);
+    return values;
+  };
+  const headers = splitLine(lines[headerIndex]).map(normalizeText);
   const indexOf = (name: string) => headers.findIndex((header) => header === normalizeText(name));
   const column = (values: string[], name: string) => values[indexOf(name)]?.trim() || "";
   const required = ["Nº CTR", "COD. IMÓVEL", "ENDEREÇO", "Nº", "LOCATÁRIO", "PROPRIETÁRIO", "ALUGUEL", "TX. ADM."];
   if (required.some((name) => indexOf(name) < 0)) throw new Error("O CSV não possui todas as colunas necessárias do relatório.");
 
   return lines.slice(headerIndex + 1).map((line) => {
-    const values = line.split(";");
+    const values = splitLine(line);
     return {
       contractNumber: column(values, "Nº Ctr"), propertyCode: column(values, "Cod. Imóvel"), category: column(values, "Categoria"),
       street: column(values, "Endereço"), number: column(values, "Nº"), complement: column(values, "Ap/ Sl"),

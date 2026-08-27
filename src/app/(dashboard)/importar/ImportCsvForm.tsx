@@ -1,5 +1,5 @@
 "use client";
-import { processCsvImport } from "@/actions/imobiliaria";
+import { processCsvImport } from "@/actions/imobiliaria-v2";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 

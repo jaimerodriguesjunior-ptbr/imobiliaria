@@ -1,5 +1,5 @@
 "use client";
-import { saveOwner } from "@/actions/imobiliaria";
+import { saveOwner } from "@/actions/imobiliaria-v2";
 import { Building2, Pencil, Search, X } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";

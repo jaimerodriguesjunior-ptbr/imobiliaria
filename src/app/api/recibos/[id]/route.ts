@@ -7,10 +7,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Não autenticado", { status: 401 });
-  const { data: membership } = await supabase.from("imob_memberships").select("tenant_id").eq("user_id", user.id).eq("active", true).limit(1).maybeSingle();
+  const { data: membership, error: membershipError } = await supabase.from("imob_memberships").select("tenant_id,store_id").eq("user_id", user.id).eq("active", true).order("created_at").order("id").limit(1).maybeSingle();
+  if (membershipError) return new NextResponse(membershipError.message, { status: 500 });
+  if (!membership?.store_id) return new NextResponse("Usuário sem filial ativa", { status: 403 });
   const tenantId = membership?.tenant_id || "";
+  const storeId = membership.store_id;
   if (new URL(request.url).searchParams.get("zip") === "1") {
-    const { data: receipts, error } = await supabase.from("imob_receipts").select("filename, document_html, imob_monthly_leases!inner(import_id)").eq("tenant_id", tenantId).eq("imob_monthly_leases.import_id", id).order("filename");
+    const { data: receipts, error } = await supabase.from("imob_receipts").select("filename, document_html, imob_monthly_leases!inner(import_id)").eq("tenant_id", tenantId).eq("store_id", storeId).eq("imob_monthly_leases.import_id", id).order("filename");
     if (error) return new NextResponse(error.message, { status: 500 });
     if (!receipts?.length) return new NextResponse("Nenhum recibo encontrado", { status: 404 });
     const zip = new JSZip();
@@ -18,7 +21,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const content = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
     return new NextResponse(content as unknown as BodyInit, { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="recibos-${id}.zip"` } });
   }
-  const { data: receipt } = await supabase.from("imob_receipts").select("filename, document_html").eq("id", id).eq("tenant_id", tenantId).maybeSingle();
+  const { data: receipt, error } = await supabase.from("imob_receipts").select("filename, document_html").eq("id", id).eq("tenant_id", tenantId).eq("store_id", storeId).maybeSingle();
+  if (error) return new NextResponse(error.message, { status: 500 });
   if (!receipt) return new NextResponse("Documento não encontrado", { status: 404 });
-  return new NextResponse(receipt.document_html, { headers: { "Content-Type": "application/msword; charset=utf-8", "Content-Disposition": `attachment; filename="${encodeURIComponent(receipt.filename)}"` } });
+  const asciiName = receipt.filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+  return new NextResponse(receipt.document_html, { headers: { "Content-Type": "application/msword; charset=utf-8", "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(receipt.filename)}` } });
 }

@@ -1,5 +1,6 @@
 "use client";
-import { savePropertyLease } from "@/actions/imobiliaria";
+/* eslint-disable @next/next/no-html-link-for-pages -- retorno simples sem estado de navegação */
+import { savePropertyLease } from "@/actions/imobiliaria-v2";
 import { ArrowLeft, Save } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";

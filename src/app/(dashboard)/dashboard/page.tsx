@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getDashboardData } from "@/actions/imobiliaria";
+import { getDashboardData } from "@/actions/imobiliaria-v2";
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
