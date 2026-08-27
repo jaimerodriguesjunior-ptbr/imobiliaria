@@ -10,6 +10,10 @@ export type CsvLease = {
   rentAmount: number | null;
   commissionAmount: number | null;
   commissionRate: number | null;
+  ownerDocument: string;
+  renterDocument: string;
+  city: string;
+  state: string;
 };
 
 export const normalizeText = (value = "") => value
@@ -59,6 +63,8 @@ export function parseLeaseTable(table: unknown[][]): CsvLease[] {
     contractNumber: indexOf("N CTR", "NUM CTR", "NUMERO CTR"), propertyCode: indexOf("COD IMOVEL", "CODIGO IMOVEL"),
     category: indexOf("CATEGORIA"), street: indexOf("ENDERECO"), number: indexOf("N", "NUMERO"),
     complement: indexOf("AP SL", "AP SALA", "COMPLEMENTO"), renterName: indexOf("LOCATARIO"), ownerName: indexOf("PROPRIETARIO"),
+    renterDocument: indexOf("CPF LOCATARIO", "CPF CNPJ LOCATARIO"), ownerDocument: indexOf("CPF PROPRIETARIO", "CPF CNPJ PROPRIETARIO"),
+    city: indexOf("CIDADE", "MUNICIPIO"), state: indexOf("ESTADO", "UF"),
     rentAmount: indexOf("ALUGUEL"),
     commissionAmount: rawHeaders.findIndex((header) => !header.includes("%") && normalizedHeader(header) === "TX ADM"),
     commissionRate: rawHeaders.findIndex((header) => header.includes("%") && normalizedHeader(header) === "TX ADM"),
@@ -72,6 +78,8 @@ export function parseLeaseTable(table: unknown[][]): CsvLease[] {
     renterName: value(row, columns.renterName), ownerName: value(row, columns.ownerName),
     rentAmount: spreadsheetValue(row[columns.rentAmount]), commissionAmount: spreadsheetValue(row[columns.commissionAmount]),
     commissionRate: spreadsheetValue(row[columns.commissionRate]),
+    renterDocument: value(row, columns.renterDocument), ownerDocument: value(row, columns.ownerDocument),
+    city: value(row, columns.city), state: value(row, columns.state),
   })).filter((row) => row.ownerName && row.street && row.number);
 }
 
@@ -116,6 +124,7 @@ export function parseLeaseCsv(content: string): CsvLease[] {
       renterName: column(values, "Locatário"), ownerName: column(values, "Proprietário"),
       rentAmount: parseBrazilianMoney(column(values, "Aluguel")), commissionAmount: parseBrazilianMoney(column(values, "Tx. Adm.")),
       commissionRate: parseBrazilianRate(column(values, "%Tx. Adm")),
+      ownerDocument: "", renterDocument: "", city: "", state: "",
     };
   }).filter((row) => row.ownerName && row.street && row.number);
 }

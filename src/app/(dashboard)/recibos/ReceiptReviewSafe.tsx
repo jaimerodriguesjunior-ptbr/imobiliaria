@@ -21,7 +21,9 @@ export function ReceiptReview({
   initialStatus: string;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() =>
+    initialRows.filter((row) => ["active", "changed"].includes(row.status)).map((row) => row.id),
+  );
   const [phase, setPhase] = useState<"selection" | "summary">(
     initialStatus === "confirmed" ? "summary" : "selection",
   );
