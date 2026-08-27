@@ -40,6 +40,41 @@ export function parseBrazilianRate(value = "") {
   return parseBrazilianMoney(value.replace("%", ""));
 }
 
+function normalizedHeader(value: unknown) {
+  return normalizeText(String(value ?? "")).replace(/[^A-Z0-9]+/g, " ").trim();
+}
+
+function spreadsheetValue(value: unknown) {
+  if (typeof value === "number") return Math.round((value + Number.EPSILON) * 100) / 100;
+  return parseBrazilianMoney(String(value ?? ""));
+}
+
+export function parseLeaseTable(table: unknown[][]): CsvLease[] {
+  const headerIndex = table.findIndex((row) => row.some((value) => normalizedHeader(value) === "LOCATARIO") && row.some((value) => normalizedHeader(value) === "PROPRIETARIO"));
+  if (headerIndex < 0) throw new Error("Não localizamos o cabeçalho do relatório de locações.");
+  const rawHeaders = table[headerIndex].map((value) => String(value ?? ""));
+  const headers = rawHeaders.map(normalizedHeader);
+  const indexOf = (...names: string[]) => headers.findIndex((header) => names.some((name) => header === normalizedHeader(name)));
+  const columns = {
+    contractNumber: indexOf("N CTR", "NUM CTR", "NUMERO CTR"), propertyCode: indexOf("COD IMOVEL", "CODIGO IMOVEL"),
+    category: indexOf("CATEGORIA"), street: indexOf("ENDERECO"), number: indexOf("N", "NUMERO"),
+    complement: indexOf("AP SL", "AP SALA", "COMPLEMENTO"), renterName: indexOf("LOCATARIO"), ownerName: indexOf("PROPRIETARIO"),
+    rentAmount: indexOf("ALUGUEL"),
+    commissionAmount: rawHeaders.findIndex((header) => !header.includes("%") && normalizedHeader(header) === "TX ADM"),
+    commissionRate: rawHeaders.findIndex((header) => header.includes("%") && normalizedHeader(header) === "TX ADM"),
+  };
+  const required = [columns.contractNumber, columns.propertyCode, columns.street, columns.number, columns.renterName, columns.ownerName, columns.rentAmount, columns.commissionAmount];
+  if (required.some((index) => index < 0)) throw new Error("O relatório não possui todas as colunas necessárias.");
+  const value = (row: unknown[], index: number) => String(row[index] ?? "").trim();
+  return table.slice(headerIndex + 1).map((row) => ({
+    contractNumber: value(row, columns.contractNumber), propertyCode: value(row, columns.propertyCode), category: value(row, columns.category),
+    street: value(row, columns.street), number: value(row, columns.number), complement: value(row, columns.complement),
+    renterName: value(row, columns.renterName), ownerName: value(row, columns.ownerName),
+    rentAmount: spreadsheetValue(row[columns.rentAmount]), commissionAmount: spreadsheetValue(row[columns.commissionAmount]),
+    commissionRate: spreadsheetValue(row[columns.commissionRate]),
+  })).filter((row) => row.ownerName && row.street && row.number);
+}
+
 export function parseLeaseCsv(content: string): CsvLease[] {
   const lines = content.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
   const headerIndex = lines.findIndex((line) => normalizeText(line).includes("LOCATARIO") && normalizeText(line).includes("PROPRIETARIO"));

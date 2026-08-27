@@ -3,7 +3,8 @@
 import { createHash, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { competenceToDate, parseBrazilianMoney, parseLeaseCsv } from "@/lib/domain";
+import { competenceToDate, parseBrazilianMoney, parseLeaseCsv, parseLeaseTable } from "@/lib/domain";
+import * as XLSX from "xlsx";
 import { renderReceiptDocument } from "@/lib/receipt-template";
 import { createClient } from "@/utils/supabase/server";
 
@@ -265,26 +266,45 @@ export async function saveLeaseDetails(formData: FormData) {
 export async function processCsvImport(formData: FormData) {
   try {
     const { supabase, role } = await getContext();
-    if (!canManage(role)) return { error: "Somente administradores e gerentes podem importar CSV." };
+    if (!canManage(role)) return { error: "Somente administradores e gerentes podem importar relatórios." };
     const file = formData.get("file");
     const competence = String(formData.get("competence") || "");
-    if (!(file instanceof File) || !file.size) return { error: "Selecione um CSV para importar." };
+    if (!(file instanceof File) || !file.size) return { error: "Selecione um arquivo CSV ou Excel para importar." };
     if (!/^\d{4}-\d{2}$/.test(competence)) return { error: "Informe uma competência válida." };
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    let content: string;
-    try {
-      content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    } catch {
-      content = new TextDecoder("windows-1252").decode(bytes);
+    const extension = file.name.toLowerCase().split(".").pop();
+    let rows;
+    if (extension === "xls" || extension === "xlsx") {
+      const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
+      let parsingError: unknown;
+      for (const sheetName of workbook.SheetNames) {
+        try {
+          const table = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
+          rows = parseLeaseTable(table);
+          break;
+        } catch (error) {
+          parsingError = error;
+        }
+      }
+      if (!rows) throw parsingError || new Error("Não localizamos uma aba com o relatório de locações.");
+    } else if (extension === "csv") {
+      let content: string;
+      try {
+        content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        content = new TextDecoder("windows-1252").decode(bytes);
+      }
+      rows = parseLeaseCsv(content);
+    } else {
+      return { error: "Selecione um arquivo CSV, XLS ou XLSX." };
     }
-    const rows = parseLeaseCsv(content);
-    if (!rows.length) return { error: "O CSV não possui locações válidas." };
+    if (!rows.length) return { error: "O relatório não possui locações válidas." };
 
     const result = await supabase.rpc("imob_replace_csv_import", {
       p_competence: competenceToDate(competence),
       p_source_filename: file.name,
-      p_source_hash: createHash("sha256").update(content).digest("hex"),
+      p_source_hash: createHash("sha256").update(bytes).digest("hex"),
       p_rows: rows,
     });
     if (result.error) return { error: result.error.message };
